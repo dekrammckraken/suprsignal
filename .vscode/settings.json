@@ -1,0 +1,9 @@
+{
+    "clangd.arguments": [
+        "--background-index=false",
+        "--log=error",
+        "--clang-tidy=false",
+        "--completion-style=detailed",
+        "--header-insertion=never"
+    ]
+}
