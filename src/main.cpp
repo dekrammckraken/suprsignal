@@ -1,8 +1,8 @@
-#include <M5Unified.h>
+#include "gruvbox-dark-palette.hpp" // definisci i colori come CRGB
 #include <FastLED.h>
+#include <M5Unified.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
-#include "gruvbox-dark-palette.hpp" // definisci i colori come CRGB
 
 #define LED_PIN 27
 #define NUM_LEDS 25
@@ -40,10 +40,10 @@ void setup() {
   FastLED.show();
 
   // WiFi
-  M5.Display.println("Starting WiFi...");
-  if (!wifiManager.autoConnect("SUPRLIGHT")) {
-    M5.Display.println("WiFi failed!");
-    ESP.restart();
+  while (WiFi.status() != WL_CONNECTED) {
+    WiFi.begin();
+    M5.Display.print(".");
+    delay(2000);
   }
   wifi_connected = true;
   server.begin();
@@ -52,7 +52,6 @@ void setup() {
   M5.Display.println("WiFi connected!");
   M5.Display.println(WiFi.localIP());
 
-  // LED di sistema iniziali
   for (int i = 0; i < 5; i++) {
     sys_leds[i] = charcoal;
     leds[i] = charcoal;
@@ -69,13 +68,25 @@ bool is_online() {
   return false;
 }
 
-void check_system_status(uint8_t idx) {
+void UpdateStatusBar(uint8_t idx) {
   switch (idx) {
-    case 0: wifi_connected = WiFi.isConnected(); sys_leds[0] = wifi_connected ? cream : blood_red; break;
-    case 1: wan = is_online(); sys_leds[1] = wan ? cream : blood_red; break;
-    case 2: sys_leds[2] = charcoal; break;
-    case 3: sys_leds[3] = charcoal; break;
-    case 4: sys_leds[4] = charcoal; break;
+  case 0:
+    wifi_connected = WiFi.isConnected();
+    sys_leds[0] = wifi_connected ? cream : blood_red;
+    break;
+  case 1:
+    wan = is_online();
+    sys_leds[1] = wan ? cream : blood_red;
+    break;
+  case 2:
+    sys_leds[2] = charcoal;
+    break;
+  case 3:
+    sys_leds[3] = charcoal;
+    break;
+  case 4:
+    sys_leds[4] = charcoal;
+    break;
   }
 }
 
@@ -85,19 +96,22 @@ void UserSignal(const uint8_t *mask, const CRGB *palette) {
   }
 }
 
-void HandleUserSignal() {
+void SignalHandler() {
   WiFiClient client = server.available();
-  if (!client || !client.connected()) return;
+  if (!client || !client.connected())
+    return;
 
   char buffer[MSG_LEN];
   size_t bread = client.readBytes(buffer, MSG_LEN);
-  if (bread < MSG_LEN) return;
+  if (bread < MSG_LEN)
+    return;
 
   uint8_t *ubuffer = reinterpret_cast<uint8_t *>(buffer);
   uint8_t mask[USR_LEN] = {0};
   CRGB palette[USR_LEN];
 
-  for (size_t i = 0; i < USR_LEN; ++i) mask[i] = ubuffer[i];
+  for (size_t i = 0; i < USR_LEN; ++i)
+    mask[i] = ubuffer[i];
   int idx = USR_LEN;
   for (size_t i = 0; i < USR_LEN; ++i) {
     palette[i].r = ubuffer[idx++];
@@ -108,21 +122,24 @@ void HandleUserSignal() {
   UserSignal(mask, palette);
 }
 
-void SystemBar() {
+void StatusBar() {
   static unsigned long pauseUntil = 0;
   unsigned long now = millis();
 
   if (now - lastCheck > CHECK_INTERVAL) {
-    for (uint8_t i = CURSOR_MIN; i <= CURSOR_MAX; i++) check_system_status(i);
+    for (uint8_t i = CURSOR_MIN; i <= CURSOR_MAX; i++)
+      UpdateStatusBar(i);
     lastCheck = now;
   }
 
-  if (pauseUntil > 0 && now < pauseUntil) return;
+  if (pauseUntil > 0 && now < pauseUntil)
+    return;
 
   if (pauseUntil > 0 && now >= pauseUntil) {
     pauseUntil = 0;
     cur_idx = 0;
-    for (uint8_t i = CURSOR_MIN; i <= CURSOR_MAX; i++) leds[i] = sys_leds[i];
+    for (uint8_t i = CURSOR_MIN; i <= CURSOR_MAX; i++)
+      leds[i] = sys_leds[i];
     leds[cur_idx] = amber;
     lastAnim = now;
     return;
@@ -142,13 +159,16 @@ void SystemBar() {
 
 void loop() {
   M5.update();
-  SystemBar();
-  HandleUserSignal();
+
+  StatusBar();
+
+  SignalHandler();
+
   FastLED.show();
 
   if (M5.BtnA.wasPressed()) {
-    M5.Display.println("Resetting WiFi...");
+    M5.Display.println("Resetting Settings...");
     wifiManager.resetSettings();
-    ESP.restart();
+    wifiManager.startConfigPortal("SUPRLIGHT");
   }
 }
