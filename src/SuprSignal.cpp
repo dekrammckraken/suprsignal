@@ -28,10 +28,6 @@ SuprSignal::SuprSignal() {
   _wifi_connected = true;
   _wifiServer->begin();
 
-  M5.Display.clear();
-  M5.Display.println("WiFi connected!");
-  M5.Display.println(WiFi.localIP());
-
   for (int i = 0; i < 5; i++) {
     sys_leds[i] = coal;
     leds[i] = coal;
