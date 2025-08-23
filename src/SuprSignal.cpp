@@ -1,21 +1,15 @@
 #include "SuprSignal.hpp"
 #include "SignalColors.hpp"
-#include <FastLED.h>
-#include <M5Unified.h>
-#include <WiFi.h>
-#include <WiFiManager.h>
 
 SuprSignal::SuprSignal() {
-
+  _wifiManager = new WiFiManager();
+  _wifiServer  = new WiFiServer(PORT);
 
   lastCheck = 0;
   lastAnim = 0;
   CHECK_INTERVAL = 60000;
   ANIM_INTERVAL = 60;
   cur_idx = CURSOR_MIN;
-
-  _wifiServer = WiFiServer(PORT);
-  _wifiManager = WiFiManager();
   _wifi_connected = false;
 
   auto cfg = M5.config();
@@ -23,20 +17,18 @@ SuprSignal::SuprSignal() {
 
   Serial.begin(115200);
 
-  // LED WS2812
   FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
   FastLED.clear();
   FastLED.setBrightness(50);
   FastLED.show();
 
-  // WiFi
   while (WiFi.status() != WL_CONNECTED) {
     WiFi.begin();
     M5.Display.print(".");
     delay(2000);
   }
   _wifi_connected = true;
-  _wifiServer.begin();
+  _wifiServer->begin();
 
   M5.Display.clear();
   M5.Display.println("WiFi connected!");
@@ -48,10 +40,20 @@ SuprSignal::SuprSignal() {
   }
   FastLED.show();
 }
-SuprSignal::~SuprSignal() {}
+
+SuprSignal::~SuprSignal() {
+  if (_wifiManager) {
+    delete _wifiManager;
+    _wifiManager = nullptr;
+  }
+  if (_wifiServer) {
+    delete _wifiServer;
+    _wifiServer = nullptr;
+  }
+}
 
 void SuprSignal::Accept() {
-  WiFiClient client = _wifiServer.available();
+  WiFiClient client = _wifiServer->available();
   if (!client || !client.connected())
     return;
 
@@ -75,10 +77,10 @@ void SuprSignal::Accept() {
 
   ReadSignal(mask, palette);
 }
+
 void SuprSignal::ReadSignal(const uint8_t *mask, const CRGB *palette) {
-  for (size_t i = 5; i < USR_LEN; ++i) {
+  for (size_t i = 5; i < USR_LEN; ++i)
     leds[i] = mask[i] ? palette[i] : CRGB::Black;
-  }
 }
 
 void SuprSignal::Present() {
@@ -89,10 +91,15 @@ void SuprSignal::Present() {
 
   if (M5.BtnA.wasPressed()) {
     M5.Display.println("Resetting Settings...");
-    _wifiManager.resetSettings();
-    _wifiManager.startConfigPortal("SUPRLIGHT");
+    _wifiManager->resetSettings();
+    _wifiManager->startConfigPortal("SUPRLIGHT");
   }
 }
+void SuprSignal::SetStatus(uint8_t idx) {
+  sys_leds[idx] = CRGB::Green;
+  leds[idx] = sys_leds[idx];
+}
+
 void SuprSignal::Status() {
   static unsigned long pauseUntil = 0;
   unsigned long now = millis();
