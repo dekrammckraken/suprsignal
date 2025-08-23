@@ -51,7 +51,6 @@ SuprSignal::~SuprSignal() {
     _wifiServer = nullptr;
   }
 }
-
 void SuprSignal::Accept() {
   WiFiClient client = _wifiServer->available();
   if (!client || !client.connected())
@@ -68,7 +67,9 @@ void SuprSignal::Accept() {
 
   for (size_t i = 0; i < USR_LEN; ++i)
     mask[i] = ubuffer[i];
+
   int idx = USR_LEN;
+  
   for (size_t i = 0; i < USR_LEN; ++i) {
     palette[i].r = ubuffer[idx++];
     palette[i].g = ubuffer[idx++];
@@ -77,36 +78,35 @@ void SuprSignal::Accept() {
 
   ReadSignal(mask, palette);
 }
-
 void SuprSignal::ReadSignal(const uint8_t *mask, const CRGB *palette) {
   for (size_t i = 5; i < USR_LEN; ++i)
-    leds[i] = mask[i] ? palette[i] : CRGB::Black;
+    leds[i] = mask[i] ? palette[i] : off;
 }
-
 void SuprSignal::Present() {
   M5.update();
   Accept();
-  Status();
-  FastLED.show();
+  Diagnosis();
 
   if (M5.BtnA.wasPressed()) {
     M5.Display.println("Resetting Settings...");
     _wifiManager->resetSettings();
     _wifiManager->startConfigPortal("SUPRLIGHT");
   }
+
+  FastLED.show();
 }
-void SuprSignal::SetStatus(uint8_t idx) {
-  sys_leds[idx] = CRGB::Green;
+void SuprSignal::SetSignal(uint8_t idx) {
+  sys_leds[idx] = amber;
   leds[idx] = sys_leds[idx];
 }
+void SuprSignal::Diagnosis() {
 
-void SuprSignal::Status() {
   static unsigned long pauseUntil = 0;
   unsigned long now = millis();
 
   if (now - lastCheck > CHECK_INTERVAL) {
     for (uint8_t i = CURSOR_MIN; i <= CURSOR_MAX; i++)
-      SetStatus(i);
+      SetSignal(i);
     lastCheck = now;
   }
 

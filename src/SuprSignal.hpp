@@ -38,6 +38,6 @@ private:
 
   void Accept();
   void ReadSignal(const uint8_t *mask, const CRGB *palette);
-  void Status();
-  void SetStatus(uint8_t idx);
+  void Diagnosis();
+  void SetSignal(uint8_t idx);
 };
