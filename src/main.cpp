@@ -1,4 +1,4 @@
-#include "gruvbox-dark-palette.hpp" // definisci i colori come CRGB
+/*#include "gruvbox-dark-palette.hpp" // definisci i colori come CRGB
 #include <FastLED.h>
 #include <M5Unified.h>
 #include <WiFi.h>
@@ -171,4 +171,11 @@ void loop() {
     wifiManager.resetSettings();
     wifiManager.startConfigPortal("SUPRLIGHT");
   }
+}
+*/
+
+void setup() {
+  
+}
+void loop() {
 }
