@@ -20,14 +20,16 @@ private:
   CRGB leds[NUM_LEDS];
   CRGB sys_leds[5];
 
-  static constexpr int MSG_LEN = 100;
-  static constexpr size_t USR_LEN = 25;
+  static constexpr int SIGNAL_LEN = 100;
+  static constexpr size_t SIGNAL_LED_LEN = 25;
   static constexpr int PORT = 666;
 
-  unsigned long lastCheck = 0;
+  static constexpr unsigned long ANIM_INTERVAL = 100;
+  static constexpr unsigned long IDLE_INTERVAL = 10000;
+
   unsigned long lastAnim = 0;
-  unsigned long CHECK_INTERVAL = 1000;
-  unsigned long ANIM_INTERVAL = 100;
+  unsigned long lastMessageTime;
+
 
   bool _wifi_connected = false;
   bool wan = false;
@@ -38,6 +40,7 @@ private:
 
   void Accept();
   void ReadSignal(const uint8_t *mask, const CRGB *palette);
-  void Diagnosis();
-  void SetSignal(uint8_t idx);
+  void Analysis();
+  void SetSignalSuccess(uint8_t idx);
+  void SetSignalError(uint8_t idx);
 };

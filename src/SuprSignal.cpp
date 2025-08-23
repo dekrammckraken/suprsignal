@@ -3,12 +3,10 @@
 
 SuprSignal::SuprSignal() {
   _wifiManager = new WiFiManager();
-  _wifiServer  = new WiFiServer(PORT);
+  _wifiServer = new WiFiServer(PORT);
 
-  lastCheck = 0;
   lastAnim = 0;
-  CHECK_INTERVAL = 60000;
-  ANIM_INTERVAL = 60;
+  lastMessageTime = 0;
   cur_idx = CURSOR_MIN;
   _wifi_connected = false;
 
@@ -19,7 +17,7 @@ SuprSignal::SuprSignal() {
 
   FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
   FastLED.clear();
-  FastLED.setBrightness(50);
+  FastLED.setBrightness(20);
   FastLED.show();
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -56,36 +54,37 @@ void SuprSignal::Accept() {
   if (!client || !client.connected())
     return;
 
-  char buffer[MSG_LEN];
-  size_t bread = client.readBytes(buffer, MSG_LEN);
-  if (bread < MSG_LEN)
+  char buffer[SIGNAL_LEN];
+  size_t bread = client.readBytes(buffer, SIGNAL_LEN);
+  if (bread < SIGNAL_LEN)
     return;
 
   uint8_t *ubuffer = reinterpret_cast<uint8_t *>(buffer);
-  uint8_t mask[USR_LEN] = {0};
-  CRGB palette[USR_LEN];
+  uint8_t mask[SIGNAL_LED_LEN] = {0};
+  CRGB palette[SIGNAL_LED_LEN];
 
-  for (size_t i = 0; i < USR_LEN; ++i)
+  for (size_t i = 0; i < SIGNAL_LED_LEN; ++i)
     mask[i] = ubuffer[i];
 
-  int idx = USR_LEN;
-  
-  for (size_t i = 0; i < USR_LEN; ++i) {
+  int idx = SIGNAL_LED_LEN;
+
+  for (size_t i = 0; i < SIGNAL_LED_LEN; ++i) {
     palette[i].r = ubuffer[idx++];
     palette[i].g = ubuffer[idx++];
     palette[i].b = ubuffer[idx++];
   }
 
   ReadSignal(mask, palette);
+  lastMessageTime = millis();
 }
 void SuprSignal::ReadSignal(const uint8_t *mask, const CRGB *palette) {
-  for (size_t i = 5; i < USR_LEN; ++i)
+  for (size_t i = 0; i < SIGNAL_LED_LEN; ++i)
     leds[i] = mask[i] ? palette[i] : off;
 }
 void SuprSignal::Present() {
   M5.update();
   Accept();
-  Diagnosis();
+  Analysis();
 
   if (M5.BtnA.wasPressed()) {
     M5.Display.println("Resetting Settings...");
@@ -95,19 +94,27 @@ void SuprSignal::Present() {
 
   FastLED.show();
 }
-void SuprSignal::SetSignal(uint8_t idx) {
-  sys_leds[idx] = amber;
+void SuprSignal::SetSignalSuccess(uint8_t idx) {
+  sys_leds[idx] = lime;
   leds[idx] = sys_leds[idx];
 }
-void SuprSignal::Diagnosis() {
+void SuprSignal::SetSignalError(uint8_t idx) {
+  sys_leds[idx] = blood_red;
+  leds[idx] = sys_leds[idx];
+}
+void SuprSignal::Analysis() {
 
   static unsigned long pauseUntil = 0;
   unsigned long now = millis();
 
-  if (now - lastCheck > CHECK_INTERVAL) {
-    for (uint8_t i = CURSOR_MIN; i <= CURSOR_MAX; i++)
-      SetSignal(i);
-    lastCheck = now;
+  if (now - lastMessageTime < IDLE_INTERVAL) {
+    return;
+  }
+
+  if (_wifi_connected) {
+    SetSignalSuccess(0);
+  } else {
+    SetSignalError(0);
   }
 
   if (pauseUntil > 0 && now < pauseUntil)
